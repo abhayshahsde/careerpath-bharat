@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/apps/" />
+  <Folder Name="/apps/api/">
+    <Project Path="apps/api/CareerPath.Api/CareerPath.Api.csproj" />
+    <Project Path="apps/api/CareerPath.Application/CareerPath.Application.csproj" />
+    <Project Path="apps/api/CareerPath.Contracts/CareerPath.Contracts.csproj" />
+    <Project Path="apps/api/CareerPath.Domain/CareerPath.Domain.csproj" />
+    <Project Path="apps/api/CareerPath.Infrastructure/CareerPath.Infrastructure.csproj" />
+    <Project Path="apps/api/CareerPath.Migrations/CareerPath.Migrations.csproj" />
+    <Project Path="apps/api/CareerPath.Tests.Integration/CareerPath.Tests.Integration.csproj" />
+    <Project Path="apps/api/CareerPath.Tests.Unit/CareerPath.Tests.Unit.csproj" />
+  </Folder>
+  <Folder Name="/apps/worker/">
+    <Project Path="apps/worker/CareerPath.Worker.Tests/CareerPath.Worker.Tests.csproj" />
+    <Project Path="apps/worker/CareerPath.Worker/CareerPath.Worker.csproj" />
+  </Folder>
+</Solution>

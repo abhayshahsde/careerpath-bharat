@@ -1,0 +1,40 @@
+services:
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: careerpath-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "CareerPath_Dev123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'CareerPath_Dev123!' -Q 'SELECT 1' -C -N -b"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: careerpath-mq
+    environment:
+      RABBITMQ_DEFAULT_USER: careerpath
+      RABBITMQ_DEFAULT_PASS: careerpath_dev
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  sql-data:
+  rabbitmq-data:

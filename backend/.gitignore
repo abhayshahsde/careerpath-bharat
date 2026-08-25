@@ -1,0 +1,34 @@
+# Git ignore for CareerPath Bharat Backend
+
+## User secrets and local overrides
+apps/api/CareerPath.Api/appsettings.Development.json
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+## Build outputs
+**/bin/
+**/obj/
+
+## IDE
+.vs/
+*.user
+.idea/
+*.suo
+
+## Test results
+**/TestResults/
+**/coverage/
+**/*.trx
+**/*.xml
+
+## Docker volumes
+docker-compose.override.yml
+
+## NuGet
+*.nupkg
+.nuget/
+
+## Logs
+logs/
+*.log

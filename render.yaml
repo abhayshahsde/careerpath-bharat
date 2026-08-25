@@ -1,0 +1,22 @@
+services:
+  # Backend .NET 8 Web API
+  - type: web
+    name: careerpath-api
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: singapore
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: CareerPathBharat
+      - key: Jwt__Audience
+        value: CareerPathBharatClients
+      - key: Cors__AllowedOrigins__0
+        value: https://careerpath-bharat.vercel.app

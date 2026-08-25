@@ -1,0 +1,26 @@
+# Root .gitignore for CareerPath Bharat
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/.env*.local
+frontend/*.tsbuildinfo
+
+# .NET / C#
+backend/**/bin/
+backend/**/obj/
+backend/.vs/
+backend/*.user
+backend/*.suo
+backend/apps/api/CareerPath.Api/appsettings.Development.json
+backend/**/TestResults/
+backend/logs/
+backend/*.log
+
+# OS / Misc
+.DS_Store
+Thumbs.db
+*.pem

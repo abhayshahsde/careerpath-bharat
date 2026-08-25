@@ -1,0 +1,11 @@
+global using CareerPath.Api;
+global using CareerPath.Api.Endpoints;
+global using CareerPath.Api.Identity;
+global using CareerPath.Api.Middleware;
+global using CareerPath.Application.Abstractions;
+global using CareerPath.Application.Careers;
+global using CareerPath.Infrastructure;
+global using CareerPath.Infrastructure.Data;
+global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+global using Scalar.AspNetCore;
