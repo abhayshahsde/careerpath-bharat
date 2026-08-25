@@ -179,10 +179,15 @@ try
     var app = builder.Build();
 
     // Run migrations on startup (creates tables, catalog data, and seeds if they don't exist)
-    using (var scope = app.Services.CreateScope())
+    try
     {
+        using var scope = app.Services.CreateScope();
         var migrationRunner = scope.ServiceProvider.GetRequiredService<MigrationRunner>();
         await migrationRunner.RunAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Database migration on startup encountered an error or database is initializing. API will continue to start.");
     }
 
     // ─── Middleware pipeline ──────────────────────────────────────────────────
