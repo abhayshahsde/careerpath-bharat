@@ -1,0 +1,43 @@
+name: Build and deploy .NET 8 Web API to Azure App Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/azure-webapps-dotnet.yml'
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: careerpath-api-bharat
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'backend/apps/api/CareerPath.Api/CareerPath.Api.csproj'
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build project
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: Publish project
+        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --output "${{ runner.temp }}/publish"
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: '${{ runner.temp }}/publish'
