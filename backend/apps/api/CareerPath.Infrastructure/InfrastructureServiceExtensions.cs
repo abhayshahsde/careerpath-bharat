@@ -17,7 +17,14 @@ public static class InfrastructureServiceExtensions
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+            ?? configuration["ConnectionStrings:DefaultConnection"]
+            ?? configuration["SQLAZURECONNSTR_DefaultConnection"]
+            ?? configuration["CUSTOMCONNSTR_DefaultConnection"]
+            ?? configuration["SQLCONNSTR_DefaultConnection"]
+            ?? Environment.GetEnvironmentVariable("SQLAZURECONNSTR_DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured in Azure App Service Configuration.");
 
         services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(connectionString));
 
