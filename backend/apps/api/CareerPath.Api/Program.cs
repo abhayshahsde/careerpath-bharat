@@ -178,10 +178,9 @@ try
     // ─────────────────────────────────────────────────────────────────────────
     var app = builder.Build();
 
-    // Run migrations on startup (dev/staging only — never blind production migrations)
-    if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+    // Run migrations on startup (creates tables, catalog data, and seeds if they don't exist)
+    using (var scope = app.Services.CreateScope())
     {
-        using var scope = app.Services.CreateScope();
         var migrationRunner = scope.ServiceProvider.GetRequiredService<MigrationRunner>();
         await migrationRunner.RunAsync();
     }
