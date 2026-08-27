@@ -115,7 +115,16 @@ public sealed class GeminiService : IAiService
             || question.Contains("coding", StringComparison.OrdinalIgnoreCase)
             || question.Contains("programmer", StringComparison.OrdinalIgnoreCase)
             || question.Contains("computer", StringComparison.OrdinalIgnoreCase)
-            || question.Contains("tech", StringComparison.OrdinalIgnoreCase))
+            || question.Contains("tech", StringComparison.OrdinalIgnoreCase)
+            // Hindi keywords
+            || question.Contains("सॉफ्टवेयर", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("इंजीनियर", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("डेवलपर", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("प्रोग्रामर", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("कोडिंग", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("कंप्यूटर", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("तकनीक", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("आईटी", StringComparison.OrdinalIgnoreCase))
         {
             if (isHindi)
             {
@@ -159,7 +168,13 @@ public sealed class GeminiService : IAiService
                  || question.Contains("medical", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("mbbs", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("neet", StringComparison.OrdinalIgnoreCase)
-                 || question.Contains("bds", StringComparison.OrdinalIgnoreCase))
+                 || question.Contains("bds", StringComparison.OrdinalIgnoreCase)
+                 // Hindi keywords
+                 || question.Contains("डॉक्टर", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("चिकित्सक", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("मेडिकल", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("एमबीबीएस", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("नीट", StringComparison.OrdinalIgnoreCase))
         {
             if (isHindi)
             {
@@ -183,7 +198,15 @@ public sealed class GeminiService : IAiService
                  || question.Contains("ips", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("upsc", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("civil service", StringComparison.OrdinalIgnoreCase)
-                 || question.Contains("collector", StringComparison.OrdinalIgnoreCase))
+                 || question.Contains("collector", StringComparison.OrdinalIgnoreCase)
+                 // Hindi keywords
+                 || question.Contains("आईएएस", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("आईपीएस", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("यूपीएससी", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("सिविल सेवा", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("सिविल सर्विस", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("कलेक्टर", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("प्रशासनिक", StringComparison.OrdinalIgnoreCase))
         {
             if (isHindi)
             {
@@ -213,7 +236,14 @@ public sealed class GeminiService : IAiService
                  || question.Contains("chartered", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("accountant", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("finance", StringComparison.OrdinalIgnoreCase)
-                 || question.Contains("commerce", StringComparison.OrdinalIgnoreCase))
+                 || question.Contains("commerce", StringComparison.OrdinalIgnoreCase)
+                 // Hindi keywords
+                 || question.Contains("चार्टर्ड", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("एकाउंटेंट", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("सीए", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("वाणिज्य", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("वित्त", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("लेखाकार", StringComparison.OrdinalIgnoreCase))
         {
             if (isHindi)
             {
@@ -276,7 +306,15 @@ public sealed class GeminiService : IAiService
         else if (question.Contains("course", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("pathyakram", StringComparison.OrdinalIgnoreCase)
                  || question.Contains("degree", StringComparison.OrdinalIgnoreCase)
-                 || question.Contains("kya karu", StringComparison.OrdinalIgnoreCase))
+                 || question.Contains("kya karu", StringComparison.OrdinalIgnoreCase)
+                 // Hindi keywords
+                 || question.Contains("कोर्स", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("पाठ्यक्रम", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("डिग्री", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("क्या करूं", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("क्या करें", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("12वीं के बाद", StringComparison.OrdinalIgnoreCase)
+                 || question.Contains("बारहवीं के बाद", StringComparison.OrdinalIgnoreCase))
         {
             var eduText = !string.IsNullOrWhiteSpace(edu) ? edu : (isHindi ? "आपकी रुचियों" : "your interests");
 
