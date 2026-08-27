@@ -49,6 +49,19 @@ export default function Navbar() {
     }
   }, [])
 
+  // Always unlock body scroll on route change so no modal/SDK can lock scrolling across pages
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+      document.body.style.removeProperty('overflow')
+      document.documentElement.style.removeProperty('overflow')
+      document.body.style.position = ''
+      document.body.style.width = ''
+      document.querySelectorAll('.razorpay-container').forEach(el => el.remove())
+    }
+  }, [pathname])
+
   function toggleTheme() {
     const nextTheme = theme === 'light' ? 'dark' : 'light'
     setTheme(nextTheme)

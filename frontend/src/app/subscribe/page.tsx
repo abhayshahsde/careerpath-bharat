@@ -114,6 +114,30 @@ export default function SubscribePage() {
     setShowCheckoutModal(true)
   }
 
+  const unlockBodyScroll = () => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+      document.body.style.removeProperty('overflow')
+      document.documentElement.style.removeProperty('overflow')
+      document.body.style.position = ''
+      document.body.style.width = ''
+      document.querySelectorAll('.razorpay-container').forEach(el => el.remove())
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      unlockBodyScroll()
+    }
+  }, [])
+
+  const handleCloseModal = () => {
+    setShowCheckoutModal(false)
+    setSelectedPlanForCheckout(null)
+    unlockBodyScroll()
+  }
+
   const launchRazorpayStandardCheckout = async () => {
     if (!selectedPlanForCheckout) return
     const plan = selectedPlanForCheckout
@@ -139,6 +163,7 @@ export default function SubscribePage() {
         description: `${plan.name} (${plan.billingCycle})`,
         image: 'https://careerpath-bharat.azurestaticapps.net/logo.png',
         handler: async function (response: any) {
+          unlockBodyScroll()
           try {
             const paymentId = response.razorpay_payment_id || `rzp_pay_${Date.now()}`
             const res = (await api.subscribeToPlan(
@@ -161,6 +186,7 @@ export default function SubscribePage() {
             setError(err?.message ?? 'Failed to finalize subscription verification.')
           } finally {
             setPurchasing(null)
+            unlockBodyScroll()
           }
         },
         prefill: {
@@ -173,6 +199,7 @@ export default function SubscribePage() {
         modal: {
           ondismiss: function () {
             setPurchasing(null)
+            unlockBodyScroll()
           },
         },
       }
@@ -181,6 +208,7 @@ export default function SubscribePage() {
       rzpInstance.on('payment.failed', function (response: any) {
         setError(response?.error?.description || 'Payment transaction failed or cancelled.')
         setPurchasing(null)
+        unlockBodyScroll()
       })
       rzpInstance.open()
     } else {
@@ -201,6 +229,7 @@ export default function SubscribePage() {
         setError(err?.message ?? 'Payment transaction failed.')
       } finally {
         setPurchasing(null)
+        unlockBodyScroll()
       }
     }
   }
@@ -471,7 +500,12 @@ export default function SubscribePage() {
 
         {/* ── Razorpay Gateway Checkout Modal (Light & Dark Polish) ────────────────────── */}
         {showCheckoutModal && selectedPlanForCheckout && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleCloseModal()
+            }}
+          >
             <div 
               className="rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border transition-colors"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
@@ -492,7 +526,7 @@ export default function SubscribePage() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setShowCheckoutModal(false)}
+                  onClick={handleCloseModal}
                   className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
