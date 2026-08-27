@@ -17,10 +17,16 @@ using Serilog;
 using Serilog.Events;
 
 // ─── Bootstrap logger (before DI is built) ───────────────────────────────────
+Directory.CreateDirectory("logs");
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .WriteTo.Console(outputTemplate:
         "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "logs/careerpath-.txt",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 31,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {CorrelationId} {SourceContext} {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
 
 try
@@ -29,7 +35,7 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // ─── Serilog (final config, reads from appsettings) ──────────────────────
+    // ─── Serilog (final config, reads from appsettings & ensures file sink) ─────
     builder.Host.UseSerilog((ctx, services, config) => config
         .ReadFrom.Configuration(ctx.Configuration)
         .ReadFrom.Services(services)
@@ -38,7 +44,12 @@ try
         .Enrich.WithMachineName()
         .Enrich.WithThreadId()
         .WriteTo.Console(outputTemplate:
-            "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {SourceContext} {Message:lj}{NewLine}{Exception}"));
+            "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {SourceContext} {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File(
+            path: "logs/careerpath-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 31,
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {CorrelationId} {SourceContext} {Message:lj}{NewLine}{Exception}"));
 
     // ─── Configuration validation ─────────────────────────────────────────────
     builder.Services.AddOptions<JwtOptions>()
@@ -249,6 +260,7 @@ try
     app.MapAi();
     app.MapBilling();
     app.MapNotificationAnalytics();
+    app.MapLogs();
 
     app.Run();
 }
