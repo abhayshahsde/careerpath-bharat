@@ -47,6 +47,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: .net-app
+          path: "${{ runner.temp }}/net-app"
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -61,4 +62,4 @@ jobs:
         with:
           app-name: 'careerpath-api-bharat'
           slot-name: 'Production'
-          package: .
+          package: "${{ runner.temp }}/net-app"
