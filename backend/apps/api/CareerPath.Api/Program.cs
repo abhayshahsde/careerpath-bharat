@@ -258,14 +258,17 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // ─── Swagger UI + Scalar ───────────────────────────────────────────────────
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CareerPath Bharat API v1"));
-    app.MapScalarApiReference(options =>
+    // ─── Swagger UI + Scalar (Only in Local Development) ───────────────────────
+    if (app.Environment.IsDevelopment())
     {
-        options.Title = "CareerPath Bharat API";
-        options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
-    });
+        app.UseSwagger();
+        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CareerPath Bharat API v1"));
+        app.MapScalarApiReference(options =>
+        {
+            options.Title = "CareerPath Bharat API";
+            options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
+        });
+    }
 
     // ─── Health endpoints ─────────────────────────────────────────────────────
     app.MapHealthChecks("/health/live", new HealthCheckOptions
