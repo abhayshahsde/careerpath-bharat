@@ -174,7 +174,6 @@ try
         });
     });
 
-    // ─── Problem Details ──────────────────────────────────────────────────────
     builder.Services.AddProblemDetails(options =>
     {
         options.CustomizeProblemDetails = ctx =>
@@ -183,6 +182,29 @@ try
                 ctx.HttpContext.Items["CorrelationId"]?.ToString();
             ctx.ProblemDetails.Extensions["instance"] =
                 ctx.HttpContext.Request.Path.Value;
+
+            var exception = ctx.HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+            if (exception is InvalidOperationException invEx)
+            {
+                ctx.ProblemDetails.Status = StatusCodes.Status400BadRequest;
+                ctx.ProblemDetails.Title = invEx.Message;
+                ctx.ProblemDetails.Detail = invEx.Message;
+                ctx.HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            }
+            else if (exception is FluentValidation.ValidationException valEx)
+            {
+                ctx.ProblemDetails.Status = StatusCodes.Status422UnprocessableEntity;
+                ctx.ProblemDetails.Title = "Validation Failed";
+                ctx.ProblemDetails.Detail = string.Join("; ", valEx.Errors.Select(e => e.ErrorMessage));
+                ctx.HttpContext.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            }
+            else if (exception is KeyNotFoundException knfEx)
+            {
+                ctx.ProblemDetails.Status = StatusCodes.Status404NotFound;
+                ctx.ProblemDetails.Title = knfEx.Message;
+                ctx.ProblemDetails.Detail = knfEx.Message;
+                ctx.HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            }
         };
     });
 
