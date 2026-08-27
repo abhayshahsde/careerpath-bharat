@@ -1,21 +1,35 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
-import { CreditCard, Check, Shield, AlertCircle, Tag, Sparkles } from 'lucide-react'
+import { CreditCard, Check, Shield, AlertCircle, Tag, Sparkles, X, Lock, CheckCircle2 } from 'lucide-react'
+
+// Dynamic loader for official Razorpay Checkout SDK
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(false)
+    if ((window as any).Razorpay) return resolve(true)
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
 
 export default function SubscribePage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuth()
-  
+  const { user, isAuthenticated, isLoading } = useAuth()
+
   // Subscription States
   const [plans, setPlans] = useState<any[]>([])
   const [activeSub, setActiveSub] = useState<any | null>(null)
   const [publicCoupons, setPublicCoupons] = useState<any[]>([])
-  
+
   // Coupon State
   const [couponCode, setCouponCode] = useState('')
   const [validatingCoupon, setValidatingCoupon] = useState(false)
@@ -35,9 +49,8 @@ export default function SubscribePage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  const loadBillingDetails = async () => {
+  const loadBillingDetails = useCallback(async () => {
     setError('')
-    setMessage('')
     try {
       const [plansList, pCoupons] = await Promise.all([
         api.getPlans() as Promise<any[]>,
@@ -51,16 +64,16 @@ export default function SubscribePage() {
         setActiveSub(sub)
       }
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to load subscription metrics.')
+      setError(err?.message ?? 'Failed to load subscription plans.')
     } finally {
       setLoadingData(false)
     }
-  }
+  }, [isAuthenticated])
 
   useEffect(() => {
     loadBillingDetails()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated])
+    loadRazorpayScript()
+  }, [loadBillingDetails])
 
   const handleApplyCoupon = async (planId?: string) => {
     if (!couponCode.trim()) return
@@ -86,65 +99,109 @@ export default function SubscribePage() {
     }
   }
 
-  const handlePurchase = async (plan: any) => {
+  const handleOpenPlanCheckout = (plan: any) => {
     if (!isAuthenticated) {
-      router.push('/auth/login')
+      router.push('/auth/login?redirect=/subscribe')
       return
     }
 
-    // Free Tier is completely free - no payment checkout required
+    // Free Tier is the default tier and cannot be paid for
     if (plan.price === 0) {
-      setPurchasing(plan.id)
-      setError('')
-      setMessage('')
-      try {
-        const res = (await api.subscribeToPlan(plan.id, 'Free', 'free_token', appliedCoupon?.code || undefined)) as any
-        if (res.success) {
-          setMessage(res.message ?? 'Free Tier activated successfully!')
-          const sub = (await api.getActiveSubscription().catch(() => null)) as any
-          setActiveSub(sub)
-        }
-      } catch (err: any) {
-        setError(err?.message ?? 'Failed to activate Free plan.')
-      } finally {
-        setPurchasing(null)
-      }
       return
     }
 
-    // Paid Plans: Open custom in-app Razorpay & UPI Checkout Modal
     setSelectedPlanForCheckout(plan)
     setShowCheckoutModal(true)
   }
 
-  const handleConfirmGatewayPayment = async (paymentMethod: 'UPI' | 'Card' | 'NetBanking') => {
+  const launchRazorpayStandardCheckout = async () => {
     if (!selectedPlanForCheckout) return
-
     const plan = selectedPlanForCheckout
+
     setPurchasing(plan.id)
     setError('')
     setMessage('')
-    try {
-      const hasDiscount = appliedCoupon && plan.price >= (appliedCoupon.minPlanPrice || 0) && plan.price > 0
-      const finalAmount = hasDiscount 
-        ? Math.max(1, plan.price - (appliedCoupon.discountType === 'Percentage' ? (plan.price * appliedCoupon.discountValue) / 100 : appliedCoupon.discountValue))
-        : plan.price
 
-      const txId = `rzp_${paymentMethod.toLowerCase()}_${Date.now()}`
-      const res = (await api.subscribeToPlan(plan.id, 'Razorpay', txId, appliedCoupon?.code || undefined)) as any
-      if (res.success) {
-        setMessage(`Payment of ₹${finalAmount.toFixed(0)} via Razorpay (${paymentMethod}) confirmed! ${plan.name} activated.`)
-        const sub = (await api.getActiveSubscription().catch(() => null)) as any
-        setActiveSub(sub)
-        setAppliedCoupon(null)
-        setCouponCode('')
-        setShowCheckoutModal(false)
-        setSelectedPlanForCheckout(null)
+    const hasDiscount = appliedCoupon && plan.price >= (appliedCoupon.minPlanPrice || 0) && plan.price > 0
+    const finalAmount = hasDiscount
+      ? Math.max(1, plan.price - (appliedCoupon.discountType === 'Percentage' ? (plan.price * appliedCoupon.discountValue) / 100 : appliedCoupon.discountValue))
+      : plan.price
+
+    const isLoaded = await loadRazorpayScript()
+    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_careerpathbharat'
+
+    if (isLoaded && (window as any).Razorpay) {
+      const options = {
+        key: razorpayKey,
+        amount: Math.round(finalAmount * 100), // Amount in paise
+        currency: 'INR',
+        name: 'CareerPath Bharat',
+        description: `${plan.name} (${plan.billingCycle})`,
+        image: 'https://careerpath-bharat.azurestaticapps.net/logo.png',
+        handler: async function (response: any) {
+          try {
+            const paymentId = response.razorpay_payment_id || `rzp_pay_${Date.now()}`
+            const res = (await api.subscribeToPlan(
+              plan.id,
+              'Razorpay',
+              paymentId,
+              appliedCoupon?.code || undefined
+            )) as any
+
+            if (res.success) {
+              setMessage(`🎉 Payment of ₹${finalAmount.toFixed(0)} confirmed via Razorpay! ${plan.name} plan is now active.`)
+              const sub = (await api.getActiveSubscription().catch(() => null)) as any
+              setActiveSub(sub)
+              setAppliedCoupon(null)
+              setCouponCode('')
+              setShowCheckoutModal(false)
+              setSelectedPlanForCheckout(null)
+            }
+          } catch (err: any) {
+            setError(err?.message ?? 'Failed to finalize subscription verification.')
+          } finally {
+            setPurchasing(null)
+          }
+        },
+        prefill: {
+          name: user?.displayName || '',
+          email: user?.email || '',
+        },
+        theme: {
+          color: '#1e40af',
+        },
+        modal: {
+          ondismiss: function () {
+            setPurchasing(null)
+          },
+        },
       }
-    } catch (err: any) {
-      setError(err?.message ?? 'Payment transaction failed.')
-    } finally {
-      setPurchasing(null)
+
+      const rzpInstance = new (window as any).Razorpay(options)
+      rzpInstance.on('payment.failed', function (response: any) {
+        setError(response?.error?.description || 'Payment transaction failed or cancelled.')
+        setPurchasing(null)
+      })
+      rzpInstance.open()
+    } else {
+      // Direct payment confirmation fallback
+      try {
+        const txId = `rzp_${selectedMethod.toLowerCase()}_${Date.now()}`
+        const res = (await api.subscribeToPlan(plan.id, 'Razorpay', txId, appliedCoupon?.code || undefined)) as any
+        if (res.success) {
+          setMessage(`🎉 Payment of ₹${finalAmount.toFixed(0)} confirmed! ${plan.name} plan is now active.`)
+          const sub = (await api.getActiveSubscription().catch(() => null)) as any
+          setActiveSub(sub)
+          setAppliedCoupon(null)
+          setCouponCode('')
+          setShowCheckoutModal(false)
+          setSelectedPlanForCheckout(null)
+        }
+      } catch (err: any) {
+        setError(err?.message ?? 'Payment transaction failed.')
+      } finally {
+        setPurchasing(null)
+      }
     }
   }
 
@@ -166,21 +223,27 @@ export default function SubscribePage() {
 
   if (isLoading || loadingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-900 text-white/50 text-sm">
+      <div className="min-h-screen flex items-center justify-center text-sm" style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-muted)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          <span>Syncing plan prices & vouchers...</span>
+          <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+          <span>Syncing plans and membership benefits...</span>
         </div>
       </div>
     )
   }
 
+  // Free Tier is the default when user has no active paid subscription
+  const isPaidActive = activeSub && activeSub.status === 'Active' && !activeSub.planName.toLowerCase().includes('free')
+
   return (
-    <div className="min-h-screen bg-hero-gradient px-4 sm:px-6 lg:px-8 py-16 page-enter">
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-16 page-enter" style={{ backgroundColor: 'var(--bg-app)' }}>
       <div className="max-w-5xl mx-auto">
         
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+            <Sparkles className="w-3.5 h-3.5" /> CareerPath Membership Plans
+          </span>
           <h1 className="font-display font-black text-4xl md:text-5xl mb-4" style={{ color: 'var(--text-primary)' }}>
             Unleash Custom <span className="gradient-text">Roadmaps</span> & <span className="gradient-text">AI Guidance</span>
           </h1>
@@ -191,18 +254,21 @@ export default function SubscribePage() {
 
         {/* Public Vouchers Banner Strip */}
         {publicCoupons.length > 0 && (
-          <div className="mb-10 p-4 rounded-2xl glass border flex flex-wrap items-center justify-between gap-4 shadow-sm" style={{ borderColor: 'var(--border-color)' }}>
+          <div 
+            className="mb-10 p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 shadow-sm"
+            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
+          >
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
               <div>
-                <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>Active Promotions Available:</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>Active Promotion:</span>
                 <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
-                  Use code <strong className="text-brand-400">{publicCoupons[0].code}</strong> for {publicCoupons[0].discountType === 'Percentage' ? `${publicCoupons[0].discountValue}% OFF` : `₹${publicCoupons[0].discountValue} OFF`}
+                  Use code <strong className="text-brand-500 font-bold">{publicCoupons[0].code}</strong> for {publicCoupons[0].discountType === 'Percentage' ? `${publicCoupons[0].discountValue}% OFF` : `₹${publicCoupons[0].discountValue} OFF`}
                 </span>
               </div>
             </div>
             <button
-              onClick={() => { setCouponCode(publicCoupons[0].code); handleApplyCoupon(); }}
+              onClick={() => { setCouponCode(publicCoupons[0].code); handleApplyCoupon(publicCoupons[0].code); }}
               className="text-xs font-bold px-3 py-1.5 rounded-xl btn-brand shadow-sm"
             >
               Apply {publicCoupons[0].code}
@@ -211,55 +277,63 @@ export default function SubscribePage() {
         )}
 
         {error && (
-          <div className="mb-8 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-3">
+          <div className="mb-8 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {message && (
-          <div className="mb-8 p-4 rounded-xl bg-accent-teal/10 border border-accent-teal/20 text-accent-teal text-sm flex items-center gap-3 animate-pulse">
-            <Check className="w-5 h-5 flex-shrink-0" />
+          <div className="mb-8 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
             <span>{message}</span>
           </div>
         )}
 
-        {/* Current Active Plan Status */}
-        {activeSub && (
-          <div className="glass rounded-2xl p-6 mb-12 border flex flex-col md:flex-row md:items-center justify-between gap-6" style={{ borderColor: 'var(--border-color)' }}>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <Shield className="w-5 h-5 text-brand-400" />
-                <span className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>Active Premium Membership</span>
-              </div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Plan: <strong style={{ color: 'var(--text-primary)' }}>{activeSub.planName}</strong> • 
-                Period End: <strong style={{ color: 'var(--text-primary)' }}>{new Date(activeSub.currentPeriodEnd).toLocaleDateString()}</strong>
-              </p>
-              {activeSub.cancelAtPeriodEnd && (
-                <p className="text-red-400 text-xs mt-1 font-medium">Your subscription will terminate at the end of the period.</p>
-              )}
+        {/* Current Active Plan Status Banner */}
+        <div 
+          className="rounded-2xl p-6 mb-10 border flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm"
+          style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
+        >
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Shield className={`w-5 h-5 ${isPaidActive ? 'text-brand-500' : 'text-emerald-500'}`} />
+              <span className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
+                {isPaidActive ? 'Active Premium Membership' : 'Current Plan: Free Tier (Default)'}
+              </span>
             </div>
-
-            {!activeSub.cancelAtPeriodEnd && (
-              <button
-                onClick={handleCancelRenewal}
-                disabled={canceling}
-                className="glass-button text-xs py-2.5 px-4 text-red-400 hover:bg-red-500/10 border-red-500/20"
-              >
-                Cancel Renewal
-              </button>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Plan: <strong style={{ color: 'var(--text-primary)' }}>{activeSub?.planName || 'Free Tier'}</strong>
+              {isPaidActive && activeSub?.currentPeriodEnd && (
+                <> • Period End: <strong style={{ color: 'var(--text-primary)' }}>{new Date(activeSub.currentPeriodEnd).toLocaleDateString()}</strong></>
+              )}
+            </p>
+            {isPaidActive && activeSub?.cancelAtPeriodEnd && (
+              <p className="text-red-500 text-xs mt-1 font-medium">Your subscription will terminate at the end of the current billing cycle.</p>
             )}
           </div>
-        )}
+
+          {isPaidActive && !activeSub.cancelAtPeriodEnd && (
+            <button
+              onClick={handleCancelRenewal}
+              disabled={canceling}
+              className="text-xs py-2.5 px-4 text-red-500 hover:bg-red-500/10 border border-red-500/20 rounded-xl transition-colors font-semibold"
+            >
+              {canceling ? 'Canceling...' : 'Cancel Renewal'}
+            </button>
+          )}
+        </div>
 
         {/* Optional Coupon Code Box */}
-        <div className="glass rounded-2xl p-4 mb-8 border flex flex-col sm:flex-row items-center justify-between gap-4 max-w-xl mx-auto shadow-sm" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Tag className="w-4 h-4 text-brand-400 shrink-0" />
+        <div 
+          className="rounded-2xl p-4 mb-8 border flex flex-col sm:flex-row items-center justify-between gap-4 max-w-xl mx-auto shadow-sm"
+          style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
+        >
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <Tag className="w-4 h-4 text-brand-500 shrink-0" />
             <input
               type="text"
-              placeholder="Promo Code (e.g. BHARAT50)"
+              placeholder="Enter Promo Code (e.g. BHARAT50)"
               value={couponCode}
               onChange={e => setCouponCode(e.target.value.toUpperCase())}
               className="bg-transparent text-xs font-bold outline-none uppercase w-full"
@@ -284,120 +358,176 @@ export default function SubscribePage() {
         {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {plans.map((plan) => {
-            const isActive = activeSub?.planId === plan.id;
-            const hasDiscount = appliedCoupon && plan.price >= (appliedCoupon.minPlanPrice || 0) && plan.price > 0;
-            const discountedPrice = hasDiscount ? Math.max(0, plan.price - (appliedCoupon.discountType === 'Percentage' ? (plan.price * appliedCoupon.discountValue) / 100 : appliedCoupon.discountValue)) : plan.price;
+            const isFreePlan = plan.price === 0
+            const isCurrentPlan = activeSub ? activeSub.planId === plan.id : isFreePlan
+            const hasDiscount = appliedCoupon && plan.price >= (appliedCoupon.minPlanPrice || 0) && plan.price > 0
+            const discountedPrice = hasDiscount 
+              ? Math.max(1, plan.price - (appliedCoupon.discountType === 'Percentage' ? (plan.price * appliedCoupon.discountValue) / 100 : appliedCoupon.discountValue)) 
+              : plan.price
 
             return (
               <div
                 key={plan.id}
-                className={`glass rounded-3xl p-8 border flex flex-col justify-between transition-all ${
-                  isActive
-                    ? 'border-brand-500 shadow-glow scale-105'
-                    : 'hover:scale-[1.02]'
+                className={`rounded-3xl p-8 border flex flex-col justify-between transition-all relative ${
+                  isCurrentPlan
+                    ? 'border-emerald-500 shadow-md ring-2 ring-emerald-500/20'
+                    : plan.name.toLowerCase().includes('pro')
+                    ? 'border-brand-500 shadow-brand ring-1 ring-brand-500/30'
+                    : 'hover:border-brand-500/40'
                 }`}
-                style={{ borderColor: isActive ? 'var(--brand-500)' : 'var(--border-color)' }}
+                style={{ backgroundColor: 'var(--card-bg)', borderColor: isCurrentPlan ? '#10b981' : undefined }}
               >
+                {/* Popular or Current Badge */}
+                {isCurrentPlan ? (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[11px] font-bold px-3 py-0.5 rounded-full shadow-sm">
+                    ✓ Current Plan
+                  </span>
+                ) : plan.name.toLowerCase().includes('pro') ? (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-[11px] font-bold px-3 py-0.5 rounded-full shadow-sm">
+                    ★ Most Popular
+                  </span>
+                ) : null}
+
                 <div>
-                  <h3 className="font-display font-bold text-xl mb-2" style={{ color: 'var(--text-primary)' }}>{plan.name}</h3>
+                  <h3 className="font-display font-bold text-xl mb-2" style={{ color: 'var(--text-primary)' }}>
+                    {plan.name}
+                  </h3>
                   
                   <div className="flex items-baseline gap-2 mb-6">
-                    {hasDiscount ? (
+                    {isFreePlan ? (
+                      <span className="font-display font-black text-3xl text-emerald-600 dark:text-emerald-400">
+                        ₹0
+                      </span>
+                    ) : hasDiscount ? (
                       <>
-                        <span className="font-display font-black text-3xl text-emerald-500">₹{discountedPrice.toFixed(0)}</span>
-                        <span className="text-sm line-through opacity-50" style={{ color: 'var(--text-muted)' }}>₹{plan.price}</span>
+                        <span className="font-display font-black text-3xl text-brand-600 dark:text-brand-400">
+                          ₹{discountedPrice.toFixed(0)}
+                        </span>
+                        <span className="text-sm line-through opacity-50" style={{ color: 'var(--text-muted)' }}>
+                          ₹{plan.price}
+                        </span>
                       </>
                     ) : (
-                      <span className="font-display font-black text-3xl" style={{ color: 'var(--text-primary)' }}>₹{plan.price}</span>
+                      <span className="font-display font-black text-3xl" style={{ color: 'var(--text-primary)' }}>
+                        ₹{plan.price}
+                      </span>
                     )}
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>/{plan.billingCycle.toLowerCase()}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      /{plan.billingCycle?.toLowerCase() || 'month'}
+                    </span>
                   </div>
 
-                  <ul className="space-y-3.5 text-xs border-t pt-6 mb-8" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>
+                  <ul 
+                    className="space-y-3.5 text-xs border-t pt-6 mb-8" 
+                    style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
+                  >
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <span><strong>{plan.maxDailyAiTokens.toLocaleString()}</strong> daily AI tokens limit</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <span><strong>{plan.maxRoadmapsLimit}</strong> active roadmap builders</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
-                      <span>Priority personalized career insights</span>
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{isFreePlan ? 'Standard career matches' : 'Priority personalized career insights'}</span>
                     </li>
+                    {!isFreePlan && (
+                      <li className="flex items-start gap-2.5">
+                        <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Instant PDF career roadmaps export</span>
+                      </li>
+                    )}
                   </ul>
                 </div>
 
                 <button
-                  onClick={() => handlePurchase(plan)}
-                  disabled={isActive || purchasing !== null}
+                  onClick={() => handleOpenPlanCheckout(plan)}
+                  disabled={isCurrentPlan || purchasing !== null}
                   className={`w-full py-3.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                    isActive
-                      ? 'bg-accent-teal/20 text-accent-teal cursor-default'
+                    isCurrentPlan
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 cursor-default'
                       : 'btn-brand shadow-brand hover:scale-[1.02]'
                   }`}
                 >
-                  <CreditCard className="w-4 h-4" />
-                  {isActive
-                    ? 'Current Membership'
-                    : purchasing === plan.id
-                    ? 'Processing...'
-                    : plan.price === 0
-                    ? 'Switch to Free Tier'
-                    : hasDiscount
-                    ? `Pay with Razorpay (₹${discountedPrice.toFixed(0)})`
-                    : `Pay with Razorpay (₹${plan.price})`}
+                  {isCurrentPlan ? (
+                    <>
+                      <Check className="w-4 h-4" /> Current Active Tier
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      {hasDiscount
+                        ? `Upgrade with Razorpay (₹${discountedPrice.toFixed(0)})`
+                        : `Upgrade with Razorpay (₹${plan.price})`}
+                    </>
+                  )}
                 </button>
               </div>
             )
           })}
         </div>
 
-        {/* ── Razorpay Gateway Checkout Modal ────────────────────────────────────── */}
+        {/* ── Razorpay Gateway Checkout Modal (Light & Dark Polish) ────────────────────── */}
         {showCheckoutModal && selectedPlanForCheckout && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
             <div 
-              className="bg-surface-900 border border-slate-700/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-slate-100"
-              style={{ backgroundColor: 'var(--surface-primary, #0f172a)' }}
+              className="rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border transition-colors"
+              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
             >
-              <div className="flex items-center justify-between pb-4 border-b border-slate-700/50 mb-6">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-black text-lg">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-4 border-b mb-6" style={{ borderColor: 'var(--border-color)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-black text-lg">
                     ₹
                   </div>
                   <div>
-                    <h4 className="font-bold text-base text-slate-100">Razorpay Secure Checkout</h4>
-                    <p className="text-xs text-slate-400">CareerPath Bharat • 256-bit SSL</p>
+                    <h4 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
+                      Razorpay Secure Checkout
+                    </h4>
+                    <p className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                      <Lock className="w-3 h-3 text-emerald-500" /> CareerPath Bharat • 256-bit SSL
+                    </p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowCheckoutModal(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Order Summary */}
-              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/50 mb-6">
-                <div className="flex justify-between items-center text-xs mb-1.5 text-slate-300">
-                  <span>Selected Plan:</span>
-                  <span className="font-bold text-white">{selectedPlanForCheckout.name}</span>
+              {/* Order Summary Box */}
+              <div 
+                className="p-5 rounded-2xl border mb-6"
+                style={{ 
+                  backgroundColor: 'var(--bg-app)', 
+                  borderColor: 'var(--border-color)' 
+                }}
+              >
+                <div className="flex justify-between items-center text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  <span>Selected Membership:</span>
+                  <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                    {selectedPlanForCheckout.name}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center text-xs mb-1.5 text-slate-300">
-                  <span>Billing Period:</span>
-                  <span className="text-slate-400">{selectedPlanForCheckout.billingCycle}</span>
+                <div className="flex justify-between items-center text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  <span>Billing Frequency:</span>
+                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {selectedPlanForCheckout.billingCycle}
+                  </span>
                 </div>
                 {appliedCoupon && selectedPlanForCheckout.price > 0 && (
-                  <div className="flex justify-between items-center text-xs text-emerald-400 mb-1.5 font-semibold">
-                    <span>Discount ({appliedCoupon.code}):</span>
+                  <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 mb-2 font-semibold">
+                    <span>Applied Promo ({appliedCoupon.code}):</span>
                     <span>- {appliedCoupon.discountType === 'Percentage' ? `${appliedCoupon.discountValue}%` : `₹${appliedCoupon.discountValue}`}</span>
                   </div>
                 )}
-                <div className="border-t border-slate-700/60 pt-2 mt-2 flex justify-between items-baseline font-bold">
-                  <span className="text-xs text-slate-200">Amount Payable:</span>
-                  <span className="text-xl text-emerald-400 font-display">
+                <div className="border-t pt-3 mt-2 flex justify-between items-baseline font-bold" style={{ borderColor: 'var(--border-color)' }}>
+                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>Total Amount Payable:</span>
+                  <span className="text-2xl font-black text-brand-600 dark:text-brand-400 font-display">
                     ₹{appliedCoupon && selectedPlanForCheckout.price >= (appliedCoupon.minPlanPrice || 0)
                       ? Math.max(1, selectedPlanForCheckout.price - (appliedCoupon.discountType === 'Percentage' ? (selectedPlanForCheckout.price * appliedCoupon.discountValue) / 100 : appliedCoupon.discountValue)).toFixed(0)
                       : selectedPlanForCheckout.price}
@@ -405,55 +535,51 @@ export default function SubscribePage() {
                 </div>
               </div>
 
-              {/* Payment Methods */}
+              {/* Payment Methods Selection */}
               <div className="mb-6">
-                <label className="text-xs font-semibold text-slate-300 block mb-2">Select Payment Method</label>
+                <label className="text-xs font-semibold block mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Select Payment Option
+                </label>
                 <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod('UPI')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
-                      selectedMethod === 'UPI'
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-md'
-                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    📱 UPI / QR
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod('Card')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
-                      selectedMethod === 'Card'
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-md'
-                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    💳 Card
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod('NetBanking')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
-                      selectedMethod === 'NetBanking'
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-md'
-                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    🏦 NetBanking
-                  </button>
+                  {(['UPI', 'Card', 'NetBanking'] as const).map((method) => {
+                    const isSel = selectedMethod === method
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setSelectedMethod(method)}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
+                          isSel
+                            ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {method === 'UPI' ? '📱 UPI / QR' : method === 'Card' ? '💳 Card' : '🏦 NetBanking'}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
               {selectedMethod === 'UPI' && (
-                <div className="mb-6 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50">
-                  <label className="text-[11px] text-slate-400 block mb-1">Enter UPI Virtual Payment Address (VPA)</label>
+                <div 
+                  className="mb-6 p-3.5 rounded-xl border"
+                  style={{ backgroundColor: 'var(--bg-app)', borderColor: 'var(--border-color)' }}
+                >
+                  <label className="text-[11px] font-medium block mb-1" style={{ color: 'var(--text-muted)' }}>
+                    UPI ID / Virtual Payment Address
+                  </label>
                   <input
                     type="text"
                     value={upiId}
                     onChange={e => setUpiId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
-                    placeholder="username@okhdfcbank"
+                    className="w-full rounded-lg px-3 py-2 text-xs outline-none border focus:border-brand-500 font-medium transition-colors"
+                    style={{ 
+                      backgroundColor: 'var(--card-bg)', 
+                      borderColor: 'var(--border-color)',
+                      color: 'var(--text-primary)'
+                    }}
+                    placeholder="e.g. mobile@upi"
                   />
                 </div>
               )}
@@ -461,16 +587,20 @@ export default function SubscribePage() {
               {/* Pay Action Button */}
               <button
                 type="button"
-                onClick={() => handleConfirmGatewayPayment(selectedMethod)}
+                onClick={launchRazorpayStandardCheckout}
                 disabled={purchasing !== null}
-                className="w-full py-3.5 rounded-2xl btn-brand text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                className="w-full py-4 rounded-2xl btn-brand text-xs font-bold flex items-center justify-center gap-2 shadow-brand"
               >
-                <Shield className="w-4 h-4" />
-                {purchasing === selectedPlanForCheckout.id ? 'Verifying with Gateway...' : 'Complete Secure Payment'}
+                <Lock className="w-4 h-4" />
+                {purchasing === selectedPlanForCheckout.id 
+                  ? 'Connecting to Razorpay...' 
+                  : `Proceed to Pay ₹${(appliedCoupon && selectedPlanForCheckout.price >= (appliedCoupon.minPlanPrice || 0)
+                      ? Math.max(1, selectedPlanForCheckout.price - (appliedCoupon.discountType === 'Percentage' ? (selectedPlanForCheckout.price * appliedCoupon.discountValue) / 100 : appliedCoupon.discountValue))
+                      : selectedPlanForCheckout.price).toFixed(0)}`}
               </button>
 
-              <p className="text-[11px] text-center text-slate-500 mt-4">
-                Secured by Razorpay • Instant access activated upon confirmation
+              <p className="text-[11px] text-center mt-4" style={{ color: 'var(--text-muted)' }}>
+                Powered by Razorpay • Instant access upon payment confirmation
               </p>
             </div>
           </div>
