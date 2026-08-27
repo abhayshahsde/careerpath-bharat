@@ -186,7 +186,7 @@ export default function RoadmapDetailPage() {
       {/* Back button */}
       <Link
         href="/me/roadmaps"
-        className="inline-flex items-center gap-2 text-sm font-medium mb-6 text-white/60 hover:text-white transition-colors"
+        className="no-print inline-flex items-center gap-2 text-sm font-medium mb-6 text-white/60 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> {translate('myRoadmaps', currentLocale)}
       </Link>
@@ -211,7 +211,7 @@ export default function RoadmapDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start md:self-auto">
+          <div className="flex items-center gap-2.5 self-start md:self-auto no-print">
             <button
               onClick={() => window.print()}
               className="glass-button text-xs px-3.5 py-2.5 flex items-center gap-1.5 border shadow-sm"
@@ -298,7 +298,7 @@ export default function RoadmapDetailPage() {
 
                   <button
                     onClick={() => setActiveMilestoneId(milestone.id)}
-                    className="p-1.5 rounded-lg border hover:bg-brand-500/10 text-brand-500 text-xs font-semibold flex items-center gap-1 shrink-0"
+                    className="no-print p-1.5 rounded-lg border hover:bg-brand-500/10 text-brand-500 text-xs font-semibold flex items-center gap-1 shrink-0"
                     style={{ borderColor: 'var(--border-color)' }}
                   >
                     <Plus className="w-3.5 h-3.5" />

@@ -318,26 +318,131 @@ html:not(.dark) .group:hover .group-hover\:text-brand-300 {
    PRINT STYLESHEET: Roadmap & Career PDF Export
    ═══════════════════════════════════════════════════════════ */
 @media print {
+  /* ── Force white background and dark text across all elements ── */
+  :root,
+  .dark,
+  html,
   body {
+    --bg-app: #ffffff !important;
+    --text-primary: #111111 !important;
+    --text-secondary: #333333 !important;
+    --text-muted: #555555 !important;
+    --border-color: #cccccc !important;
+    --card-bg: #ffffff !important;
+    --card-border: #dddddd !important;
+    --card-hover-bg: #f9f9f9 !important;
+    --card-shadow: none !important;
+    --card-hover-shadow: none !important;
+    --input-bg: #ffffff !important;
+    --input-text: #111111 !important;
     background: #ffffff !important;
-    color: #000000 !important;
-    font-size: 12pt;
+    color: #111111 !important;
   }
-  nav, footer, .navbar, .glass-button, button, .no-print {
-    display: none !important;
-  }
-  .glass, .glass-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-  }
-  .page-enter {
-    animation: none !important;
-  }
+
+  /* ── Fix all text elements ── */
   * {
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Force all text to be dark */
+  p, h1, h2, h3, h4, h5, h6, span, div, label, li, td, th, a {
+    color: #111111 !important;
+  }
+
+  /* ── Hide UI elements not needed in print ── */
+  nav,
+  header,
+  footer,
+  .navbar,
+  [class*="btn-brand"],
+  [class*="glass-button"],
+  .no-print,
+  button:not(.print-visible),
+  [class*="AiChat"],
+  [class*="fixed"],
+  [class*="sticky"] {
+    display: none !important;
+  }
+
+  /* ── Cards and containers: white bg, visible border ── */
+  .glass,
+  .glass-card,
+  [class*="rounded"],
+  [class*="border"] {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* ── Progress bars: force visible color ── */
+  [class*="bg-brand"],
+  [class*="bg-gradient"],
+  [class*="bg-emerald"],
+  [class*="bg-blue"],
+  [class*="bg-indigo"] {
+    background: #1e40af !important;
+    color: #ffffff !important;
+  }
+
+  /* ── Roadmap specific: milestone numbers and task rows ── */
+  [class*="milestone"],
+  [class*="task"],
+  [class*="roadmap"] {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border: 1px solid #cccccc !important;
+  }
+
+  /* ── Badges and tags ── */
+  [class*="badge"],
+  [class*="tag"],
+  [class*="pill"],
+  [class*="rounded-full"] {
+    background: #e5e7eb !important;
+    color: #111111 !important;
+    border: 1px solid #aaaaaa !important;
+  }
+
+  /* ── Icons: make them dark for print ── */
+  svg {
+    color: #333333 !important;
+    fill: #333333 !important;
+    stroke: #333333 !important;
+  }
+
+  /* ── Animations: remove ── */
+  .page-enter,
+  [class*="animate"],
+  [class*="transition"] {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* ── Page layout ── */
+  body {
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  main, [role="main"], .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* ── Page breaks ── */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  [class*="milestone-card"],
+  [class*="roadmap-section"] {
+    page-break-inside: avoid;
   }
 }
