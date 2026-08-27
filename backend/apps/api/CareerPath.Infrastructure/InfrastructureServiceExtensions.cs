@@ -65,6 +65,8 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IAiService, GeminiService>();
         services.AddScoped<IBillingRepository, BillingRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IOtpRepository, OtpRepository>();
+        services.AddScoped<IOtpDeliveryService, OtpDeliveryService>();
 
         return services;
     }

@@ -90,9 +90,17 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }} htmlFor="password">
-                {translate('passwordLabel', loc)}
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }} htmlFor="password">
+                  {translate('passwordLabel', loc)}
+                </label>
+                <Link
+                  href={`/auth/forgot-password?locale=${loc}`}
+                  className="text-xs font-semibold text-brand-500 hover:text-brand-400 transition-colors"
+                >
+                  {loc === 'hi' ? 'पासवर्ड भूल गए?' : 'Forgot Password?'}
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3.5 w-4 h-4 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                 <input

@@ -325,6 +325,37 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  // Forgot Password / OTP
+  sendForgotPasswordOtp: (identifier: string, channel: 'Email' | 'WhatsApp') =>
+    apiFetch<{
+      success: boolean;
+      message: string;
+      resendCooldownSeconds: number;
+      expiresInSeconds: number;
+    }>('/api/v1/auth/forgot-password/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, channel }),
+    }),
+
+  verifyForgotPasswordOtp: (identifier: string, otp: string) =>
+    apiFetch<{
+      success: boolean;
+      resetToken: string;
+      message: string;
+    }>('/api/v1/auth/forgot-password/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, otp }),
+    }),
+
+  resetPasswordWithOtp: (resetToken: string, newPassword: string) =>
+    apiFetch<{
+      success: boolean;
+      message: string;
+    }>('/api/v1/auth/forgot-password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ resetToken, newPassword }),
+    }),
+
   // Imports
   getImportJobs: () =>
     apiFetch<unknown[]>('/api/v1/imports/jobs'),

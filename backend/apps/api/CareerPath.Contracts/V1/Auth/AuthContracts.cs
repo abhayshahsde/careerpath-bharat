@@ -42,7 +42,30 @@ public sealed record ChangePasswordRequest(
     string CurrentPassword,
     string NewPassword);
 
-// ── Forgot / Reset Password ───────────────────────────────────────────────────
+// ── Forgot / Reset Password with Gmail & WhatsApp OTP ───────────────────────
+
+public sealed record SendPasswordOtpRequest(
+    string Identifier,
+    string Channel); // "Email" or "WhatsApp"
+
+public sealed record SendPasswordOtpResponse(
+    bool Success,
+    string Message,
+    int ResendCooldownSeconds,
+    int ExpiresInSeconds);
+
+public sealed record VerifyPasswordOtpRequest(
+    string Identifier,
+    string Otp);
+
+public sealed record VerifyPasswordOtpResponse(
+    bool Success,
+    string? ResetToken,
+    string Message);
+
+public sealed record ResetPasswordWithTokenRequest(
+    string ResetToken,
+    string NewPassword);
 
 public sealed record ForgotPasswordRequest(string Email);
 

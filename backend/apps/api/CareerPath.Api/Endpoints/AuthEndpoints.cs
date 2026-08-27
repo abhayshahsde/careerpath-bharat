@@ -37,6 +37,22 @@ public static class AuthEndpoints
             .WithName("ChangePassword")
             .WithSummary("Change the authenticated user's password")
             .RequireAuthorization();
+
+        // ── Forgot Password & OTP ─────────────────────────────────────────────
+        group.MapPost("/forgot-password/send-otp", SendPasswordOtp)
+            .WithName("SendPasswordResetOtp")
+            .WithSummary("Send 6-digit OTP code to registered Email (Gmail) or WhatsApp")
+            .AllowAnonymous();
+
+        group.MapPost("/forgot-password/verify-otp", VerifyPasswordOtp)
+            .WithName("VerifyPasswordResetOtp")
+            .WithSummary("Verify 6-digit OTP code and obtain password reset authorization token")
+            .AllowAnonymous();
+
+        group.MapPost("/forgot-password/reset", ResetPasswordWithOtp)
+            .WithName("ResetPasswordWithOtp")
+            .WithSummary("Reset account password using verified OTP reset token")
+            .AllowAnonymous();
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────
@@ -100,5 +116,32 @@ public static class AuthEndpoints
         await mediator.Send(new ChangePasswordCommand(
             currentUser.UserId!.Value, req.CurrentPassword, req.NewPassword), ct);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> SendPasswordOtp(
+        [FromBody] SendPasswordOtpRequest req,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new SendPasswordResetOtpCommand(req.Identifier, req.Channel), ct);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> VerifyPasswordOtp(
+        [FromBody] VerifyPasswordOtpRequest req,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new VerifyPasswordResetOtpCommand(req.Identifier, req.Otp), ct);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> ResetPasswordWithOtp(
+        [FromBody] ResetPasswordWithTokenRequest req,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        await mediator.Send(new ResetPasswordWithTokenCommand(req.ResetToken, req.NewPassword), ct);
+        return Results.Ok(new { success = true, message = "Your password has been successfully reset. You can now log in." });
     }
 }
