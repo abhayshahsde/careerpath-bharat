@@ -36,7 +36,7 @@ jobs:
           output_location: ".next" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
         env:
-          NEXT_PUBLIC_API_URL: "https://careerpath-api-bharat-gqbngkhmhhbhzdrb8.centralindia-01.azurewebsites.net"
+          NEXT_PUBLIC_API_URL: "https://careerpath-api-bharat-gqbngkhmhbhzdrb8.centralindia-01.azurewebsites.net"
           NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_careerpathbharat"
 
   close_pull_request_job:

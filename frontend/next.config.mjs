@@ -6,7 +6,7 @@ const nextConfig = {
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'https://careerpath-api-bharat-gqbngkhmhhbhzdrb8.centralindia-01.azurewebsites.net/api/v1/:path*',
+        destination: 'https://careerpath-api-bharat-gqbngkhmhbhzdrb8.centralindia-01.azurewebsites.net/api/v1/:path*',
       },
     ]
   },
