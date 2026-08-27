@@ -269,7 +269,36 @@ export default function AiChatWidget() {
             {sending && (
               <div className="flex items-center gap-2 text-xs py-2 text-brand-500 font-medium animate-pulse">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {locale === 'hi' ? 'पाठ्यक्रम और करियर ज्ञानकोष खोजा जा रहा है...' : 'Retrieving syllabus & career knowledge base...'}
+                {locale === 'hi' ? 'करियर ज्ञानकोष खोजा जा रहा है...' : 'Analyzing career path & syllabus requirements...'}
+              </div>
+            )}
+
+            {/* Quick Suggestion Chips */}
+            {messages.length <= 2 && !sending && (
+              <div className="pt-2">
+                <p className="text-[11px] font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
+                  {locale === 'hi' ? '💡 लोकप्रिय प्रश्न:' : '💡 Quick questions you can ask:'}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    locale === 'hi' ? 'सॉफ्टवेयर इंजीनियर कैसे बनें?' : 'How to become a Software Engineer?',
+                    locale === 'hi' ? 'IAS / UPSC की तैयारी कैसे करें?' : 'Roadmap for IAS / UPSC?',
+                    locale === 'hi' ? 'डॉक्टर (NEET UG) की जानकारी' : 'Doctor & NEET UG Requirements',
+                    locale === 'hi' ? '12वीं के बाद टॉप कोर्सेज' : 'Top Career Courses after 12th',
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => {
+                        setInputMessage(chip)
+                      }}
+                      className="text-[11px] px-2.5 py-1 rounded-full border hover:border-brand-500 hover:text-brand-500 transition-colors text-left"
+                      style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--card-bg)', color: 'var(--text-secondary)' }}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -283,7 +312,7 @@ export default function AiChatWidget() {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={locale === 'hi' ? 'करियर, परीक्षा या पात्रता के बारे में पूछें...' : 'Ask about exams, careers, courses...'}
+              placeholder={locale === 'hi' ? 'करियर, परीक्षा या पात्रता के बारे में पूछें...' : 'Ask about software, medical, civil services, exams...'}
               className="flex-1 input text-xs py-2.5"
               disabled={sending}
             />
