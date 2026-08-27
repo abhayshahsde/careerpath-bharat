@@ -165,9 +165,17 @@ try
         {
             var origins = builder.Configuration
                 .GetSection("Cors:AllowedOrigins")
-                .Get<string[]>() ?? ["http://localhost:5173"];
+                .Get<string[]>() ?? [];
 
-            policy.WithOrigins(origins)
+            policy.SetIsOriginAllowed(origin =>
+                  {
+                      if (string.IsNullOrWhiteSpace(origin)) return false;
+                      var host = new Uri(origin).Host;
+                      return host.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase) ||
+                             host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                             host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                             origins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+                  })
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
