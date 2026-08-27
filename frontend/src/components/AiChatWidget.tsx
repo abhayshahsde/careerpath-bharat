@@ -43,10 +43,12 @@ export default function AiChatWidget() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
+      const name = user?.displayName?.split(' ')[0] || ''
+      const greeting = name ? (locale === 'hi' ? `नमस्ते ${name}!` : `Hello ${name}!`) : (locale === 'hi' ? 'नमस्ते!' : 'Hello!')
       const welcomeText = locale === 'hi'
-        ? `नमस्ते ${user?.displayName || 'छात्र'}! मैं आपका करियर और शिक्षा एआई सहायक हूँ। आप मुझसे करियर, प्रवेश परीक्षा (JEE, NEET, UPSC), छात्रवृत्ति या अध्ययन पथ के बारे में कुछ भी पूछ सकते हैं!`
-        : `Hello ${user?.displayName || 'Student'}! I'm your Career & Education AI Advisor. Ask me anything about career paths, entrance exams, syllabus requirements, or learning roadmaps!`
-      
+        ? `${greeting} मैं आपका **CareerPath Bharat AI करियर सलाहकार** हूँ। 🎓\n\nआप मुझसे किसी भी करियर, प्रवेश परीक्षा (JEE, NEET, UPSC, CA, CLAT), कॉलेज डिग्री या स्कॉलरशिप के बारे में पूछ सकते हैं!\n\nनीचे दिए गए बटन से शुरू करें या अपना सवाल लिखें 👇`
+        : `${greeting} I'm your **CareerPath Bharat AI Career Counselor**. 🎓\n\nAsk me anything about specific careers, entrance exams (JEE, NEET, UPSC, CLAT, CA), college degrees, or study roadmaps!\n\nTap a quick question below or type your own 👇`
+
       setMessages([
         {
           id: 'welcome',
@@ -211,7 +213,17 @@ export default function AiChatWidget() {
                         : { backgroundColor: 'var(--card-hover-bg)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }
                     }
                   >
-                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                    <div
+                      className="whitespace-pre-wrap leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: msg.text
+                          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-brand-500 underline hover:text-brand-600 font-medium" target="_self">$1</a>')
+                          .replace(/###\s*(.+)/g, '<span class="text-[13px] font-bold block mb-1">$1</span>')
+                          .replace(/^•\s+/gm, '&nbsp;&nbsp;• ')
+                          .replace(/^\d+\.\s+/gm, (m) => m)
+                      }}
+                    />
                     <span
                       className={`block text-[10px] mt-1 text-right ${
                         msg.sender === 'user' ? 'text-white/70' : ''
