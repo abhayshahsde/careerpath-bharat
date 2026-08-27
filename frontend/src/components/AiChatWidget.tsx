@@ -114,6 +114,44 @@ export default function AiChatWidget() {
     }
   }
 
+  async function sendDirectMessage(text: string) {
+    if (!text.trim() || sending) return
+    setInputMessage('')
+
+    const userMsg: Message = {
+      id: `usr-${Date.now()}`,
+      sender: 'user',
+      text: text.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
+    setMessages(prev => [...prev, userMsg])
+    setSending(true)
+
+    try {
+      const res: ChatResponse = await api.sendAiChat(text.trim(), conversationId)
+      if (res.conversationId) setConversationId(res.conversationId)
+
+      setMessages(prev => [...prev, {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: res.reply,
+        citations: res.citations ?? [],
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }])
+      api.getAiQuota().then(setQuota).catch(() => {})
+    } catch (err: unknown) {
+      const errorMsg = (err as Error)?.message || (locale === 'hi' ? 'उत्तर प्राप्त करने में असमर्थ।' : 'Failed to retrieve response.')
+      setMessages(prev => [...prev, {
+        id: `err-${Date.now()}`,
+        sender: 'ai',
+        text: `⚠️ ${errorMsg}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }])
+    } finally {
+      setSending(false)
+    }
+  }
+
   function handleResetChat() {
     setConversationId(undefined)
     setMessages([])
@@ -301,9 +339,7 @@ export default function AiChatWidget() {
                     <button
                       key={chip}
                       type="button"
-                      onClick={() => {
-                        setInputMessage(chip)
-                      }}
+                      onClick={() => sendDirectMessage(chip)}
                       className="text-[11px] px-2.5 py-1 rounded-full border hover:border-brand-500 hover:text-brand-500 transition-colors text-left"
                       style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--card-bg)', color: 'var(--text-secondary)' }}
                     >
