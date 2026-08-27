@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://careerpath-api-bharat-gqbngkhmhbhzdrb8.centralindia-01.azurewebsites.net';
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
