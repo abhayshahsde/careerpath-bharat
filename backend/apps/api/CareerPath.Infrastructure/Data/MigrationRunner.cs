@@ -75,6 +75,62 @@ public sealed class MigrationRunner
                 throw;
             }
         }
+
+        // Ensure default admin user exists
+        await EnsureDefaultAdminAsync(connection, cancellationToken);
+    }
+
+    private async Task EnsureDefaultAdminAsync(
+        Microsoft.Data.SqlClient.SqlConnection connection,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            const string adminEmail = "admin@careerpathbharat.com";
+            var existingUserId = await connection.ExecuteScalarAsync<Guid?>(
+                "SELECT Id FROM [identity].[Users] WHERE Email = @Email",
+                new { Email = adminEmail });
+
+            var hasher = new CareerPath.Infrastructure.Auth.BcryptPasswordHasher();
+            var defaultHash = hasher.Hash("Admin@12345");
+
+            Guid adminId;
+            if (!existingUserId.HasValue)
+            {
+                adminId = Guid.NewGuid();
+                await connection.ExecuteAsync(
+                    """
+                    INSERT INTO [identity].[Users] 
+                        (Id, Email, PasswordHash, DisplayName, IsEmailVerified, IsActive, CreatedAt, UpdatedAt)
+                    VALUES 
+                        (@Id, @Email, @PasswordHash, 'System Administrator', 1, 1, SYSUTCDATETIME(), SYSUTCDATETIME())
+                    """,
+                    new { Id = adminId, Email = adminEmail, PasswordHash = defaultHash });
+                _logger.LogInformation("Seeded default admin user: {Email}", adminEmail);
+            }
+            else
+            {
+                adminId = existingUserId.Value;
+            }
+
+            // Ensure Admin and SuperAdmin role assignments
+            await connection.ExecuteAsync(
+                """
+                INSERT INTO [identity].[UserRoles] (UserId, RoleId, AssignedAt)
+                SELECT @UserId, r.Id, SYSUTCDATETIME()
+                FROM [identity].[Roles] r
+                WHERE r.Name IN ('Admin', 'SuperAdmin')
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [identity].[UserRoles] ur 
+                      WHERE ur.UserId = @UserId AND ur.RoleId = r.Id
+                  )
+                """,
+                new { UserId = adminId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not ensure default admin user during startup.");
+        }
     }
 
     private async Task EnsureMigrationHistoryTableAsync(
