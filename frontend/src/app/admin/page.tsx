@@ -933,11 +933,16 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1">
-                          {(u.roles || ['Student']).map((r: string) => (
+                          {(Array.isArray(u.roles) && u.roles.length > 0 
+                            ? u.roles 
+                            : (u.role ? u.role.split(',').map((s: string) => s.trim()).filter(Boolean) : ['Student'])
+                          ).map((r: string) => (
                             <span key={r} className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              ['Admin', 'SuperAdmin'].includes(r) ? 'bg-purple-500/10 text-purple-500' :
-                              r === 'ContentEditor' ? 'bg-indigo-500/10 text-indigo-500' :
-                              r === 'Reviewer' ? 'bg-amber-500/10 text-amber-500' : 'bg-slate-500/10 text-slate-400'
+                              ['Admin', 'SuperAdmin'].includes(r) ? 'bg-purple-500/10 text-purple-500 font-bold border border-purple-500/20' :
+                              r === 'ContentEditor' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' :
+                              r === 'Reviewer' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 
+                              r === 'FinanceAdmin' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                              'bg-slate-500/10 text-slate-400 border border-slate-500/20'
                             }`}>
                               {r}
                             </span>
@@ -953,15 +958,19 @@ export default function AdminPage() {
                         {new Date(u.createdAt).toLocaleDateString()}
                       </td>
                       <td className="p-4 text-right">
-                        <button
-                          onClick={async () => {
-                            await api.toggleUserSuspension(u.id, u.isActive === false)
-                            loadData()
-                          }}
-                          className="text-xs font-semibold text-slate-400 hover:text-brand-500"
-                        >
-                          {u.isActive !== false ? 'Suspend' : 'Reactivate'}
-                        </button>
+                        {u.email === 'admin@careerpathbharat.com' ? (
+                          <span className="text-[11px] text-slate-400 font-medium">Root Admin</span>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              await api.toggleUserSuspension(u.id, u.isActive === false)
+                              loadData()
+                            }}
+                            className={`text-xs font-semibold ${u.isActive !== false ? 'text-red-500 hover:underline' : 'text-emerald-500 hover:underline'}`}
+                          >
+                            {u.isActive !== false ? 'Suspend' : 'Reactivate'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

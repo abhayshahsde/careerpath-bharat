@@ -111,6 +111,14 @@ public sealed class MigrationRunner
             else
             {
                 adminId = existingUserId.Value;
+                // Force reactivate admin account if suspended and ensure DisplayName
+                await connection.ExecuteAsync(
+                    """
+                    UPDATE [identity].[Users] 
+                    SET IsActive = 1, DisplayName = 'System Administrator', UpdatedAt = SYSUTCDATETIME()
+                    WHERE Id = @Id
+                    """,
+                    new { Id = adminId });
             }
 
             // Ensure Admin and SuperAdmin role assignments

@@ -213,6 +213,13 @@ try
                 ctx.ProblemDetails.Detail = knfEx.Message;
                 ctx.HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
             }
+            else if (exception is UnauthorizedAccessException unauthEx)
+            {
+                ctx.ProblemDetails.Status = StatusCodes.Status401Unauthorized;
+                ctx.ProblemDetails.Title = "Unauthorized";
+                ctx.ProblemDetails.Detail = unauthEx.Message;
+                ctx.HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            }
         };
     });
 

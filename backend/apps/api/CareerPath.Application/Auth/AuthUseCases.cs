@@ -138,7 +138,13 @@ public sealed class LoginHandler : IRequestHandler<LoginCommand, AuthResponse>
             throw new InvalidOperationException("Too many failed login attempts. Try again in 15 minutes.");
 
         var user = await _users.FindByEmailAsync(cmd.Email, ct);
-        var succeeded = user is not null && user.IsActive && _hasher.Verify(cmd.Password, user.PasswordHash);
+        if (user is not null && !user.IsActive)
+        {
+            await _users.RecordLoginAttemptAsync(cmd.Email, cmd.IpAddress, false, ct);
+            throw new UnauthorizedAccessException("This account is suspended. Please contact the platform administrator.");
+        }
+
+        var succeeded = user is not null && _hasher.Verify(cmd.Password, user.PasswordHash);
 
         await _users.RecordLoginAttemptAsync(cmd.Email, cmd.IpAddress, succeeded, ct);
 

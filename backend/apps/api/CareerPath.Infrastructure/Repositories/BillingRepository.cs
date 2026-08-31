@@ -382,8 +382,8 @@ public sealed class BillingRepository : IBillingRepository
 
         var sql = """
             SELECT u.Id, u.Email, u.DisplayName, u.IsActive, u.IsEmailVerified AS EmailVerified,
-                   ISNULL(r.Name, 'Student') AS Role,
-                   ISNULL(p.Name, 'Free Tier') AS SubscriptionTier,
+                   ISNULL(STRING_AGG(r.Name, ','), 'Student') AS Role,
+                   ISNULL(MAX(p.Name), 'Free Tier') AS SubscriptionTier,
                    u.CreatedAt, u.UpdatedAt AS LastLoginAt
             FROM [identity].[Users] u
             LEFT JOIN [identity].[UserRoles] ur ON ur.UserId = u.Id
@@ -391,7 +391,8 @@ public sealed class BillingRepository : IBillingRepository
             LEFT JOIN [billing].[UserSubscriptions] s ON s.UserId = u.Id AND s.Status = 'Active'
             LEFT JOIN [billing].[SubscriptionPlans] p ON p.Id = s.PlanId
             WHERE (@Search IS NULL OR u.Email LIKE '%' + @Search + '%' OR u.DisplayName LIKE '%' + @Search + '%')
-              AND (@Role IS NULL OR r.Name = @Role)
+            GROUP BY u.Id, u.Email, u.DisplayName, u.IsActive, u.IsEmailVerified, u.CreatedAt, u.UpdatedAt
+            HAVING (@Role IS NULL OR CHARINDEX(@Role, ISNULL(STRING_AGG(r.Name, ','), 'Student')) > 0)
             ORDER BY u.CreatedAt DESC
             """;
 
