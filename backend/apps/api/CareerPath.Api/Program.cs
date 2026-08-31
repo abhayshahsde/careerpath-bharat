@@ -292,6 +292,7 @@ try
     app.MapKnowledge();
     app.MapAi();
     app.MapBilling();
+    app.MapAdmin();
     app.MapNotificationAnalytics();
     app.MapLogs();
 

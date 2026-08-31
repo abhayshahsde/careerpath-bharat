@@ -561,5 +561,186 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  // Site Settings & Branding
+  getPublicSettings: () =>
+    apiFetch<{
+      siteName: string;
+      logoText: string;
+      logoSubtitle: string;
+      tagline: string;
+      announcementText: string | null;
+      announcementActive: boolean;
+      supportEmail: string;
+      supportPhone: string;
+      footerText: string;
+      navMenusJson: string;
+      updatedAt: string;
+    }>('/api/v1/settings'),
+
+  updateSiteSettings: (data: {
+    siteName: string;
+    logoText: string;
+    logoSubtitle: string;
+    tagline: string;
+    announcementText?: string | null;
+    announcementActive: boolean;
+    supportEmail: string;
+    supportPhone: string;
+    footerText: string;
+    navMenusJson: string;
+  }) =>
+    apiFetch<{ success: boolean; message: string }>('/api/v1/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // Staff & Sub-Admin Management
+  createStaffUser: (data: {
+    email: string;
+    password: string;
+    displayName: string;
+    role: string;
+  }) =>
+    apiFetch<{ success: boolean; userId: string; message: string }>('/api/v1/admin/users/create-staff', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateUserRoles: (userId: string, roles: string[]) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/users/${userId}/roles`, {
+      method: 'PUT',
+      body: JSON.stringify({ roles }),
+    }),
+
+  // Careers CMS
+  createCareer: (data: {
+    title: string;
+    slug: string;
+    summary: string;
+    categoryId?: string;
+    salaryRangeLabel?: string;
+    isFeatured: boolean;
+  }) =>
+    apiFetch<{ success: boolean; careerId: string; message: string }>('/api/v1/admin/catalog/careers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCareer: (id: string, data: {
+    title: string;
+    summary: string;
+    categoryId?: string;
+    salaryRangeLabel?: string;
+    isFeatured: boolean;
+  }) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/catalog/careers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCareer: (id: string) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/catalog/careers/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Exams CMS
+  createExam: (data: {
+    name: string;
+    code: string;
+    level: string;
+    websiteUrl?: string;
+    eligibilitySummary?: string;
+    examDate?: string;
+    applicationDeadline?: string;
+  }) =>
+    apiFetch<{ success: boolean; examId: number; message: string }>('/api/v1/admin/catalog/exams', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateExam: (id: number, data: {
+    name: string;
+    code: string;
+    level: string;
+    websiteUrl?: string;
+    eligibilitySummary?: string;
+    examDate?: string;
+    applicationDeadline?: string;
+  }) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/catalog/exams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteExam: (id: number) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/catalog/exams/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Courses CMS
+  createCourse: (data: {
+    name: string;
+    slug: string;
+    degreeLevel: string;
+    durationYears: number;
+    eligibilityCriteria?: string;
+    categoryId?: string;
+  }) =>
+    apiFetch<{ success: boolean; courseId: number; message: string }>('/api/v1/admin/catalog/courses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCourse: (id: number, data: {
+    name: string;
+    degreeLevel: string;
+    durationYears: number;
+    eligibilityCriteria?: string;
+  }) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/catalog/courses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCourse: (id: number) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/catalog/courses/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Knowledge Documents & Chunks
+  createKnowledgeDocument: (data: {
+    title: string;
+    docType: string;
+    chunks: string[];
+  }) =>
+    apiFetch<{ success: boolean; documentId: string; message: string }>('/api/v1/admin/knowledge/documents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteKnowledgeDocument: (id: string) =>
+    apiFetch<{ success: boolean; message: string }>(`/api/v1/admin/knowledge/documents/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Editorial Articles
+  createEditorialArticle: (data: {
+    title: string;
+    slug: string;
+    summary: string;
+    bodyContent: string;
+    authorName: string;
+  }) =>
+    apiFetch<{ success: boolean; articleId: string; message: string }>('/api/v1/admin/editorial/articles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Imports Trigger
+  triggerImportJob: () =>
+    apiFetch<{ success: boolean; jobId: string; message: string }>('/api/v1/admin/imports/trigger', {
+      method: 'POST',
+    }),
 };
 

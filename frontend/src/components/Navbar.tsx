@@ -3,34 +3,76 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Menu, X, Compass, BookOpen, GraduationCap, Award, LogIn, LogOut, User, ChevronDown, Shield, Sparkles, Sun, Moon } from 'lucide-react'
+import { Menu, X, Compass, LogIn, LogOut, User, ChevronDown, Shield, Sparkles, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { translate } from '@/lib/i18n'
+import { api } from '@/lib/api'
 
-const navLinks = [
-  { href: '/careers',      label: 'Careers',      icon: Compass },
-  { href: '/exams',        label: 'Exams',         icon: BookOpen },
-  { href: '/courses',      label: 'Courses',       icon: GraduationCap },
-  { href: '/scholarships', label: 'Scholarships',  icon: Award },
-]
+interface DynamicMenu {
+  label: string
+  href: string
+  isActive?: boolean
+}
 
 export default function Navbar() {
   const pathname  = usePathname()
   const router    = useRouter()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   
-  const links = [
-    ...(isAuthenticated ? [
-      { href: '/dashboard', label: 'dashboard', icon: Sparkles },
-      { href: '/me/roadmaps', label: 'roadmaps', icon: Compass }
-    ] : []),
-    ...navLinks.map(l => ({ ...l, label: l.label.toLowerCase() }))
-  ]
+  const [siteSettings, setSiteSettings] = useState<{
+    logoText?: string;
+    logoSubtitle?: string;
+    announcementText?: string | null;
+    announcementActive?: boolean;
+    navMenusJson?: string;
+  }>({
+    logoText: 'CareerPath',
+    logoSubtitle: 'Bharat',
+    announcementText: null,
+    announcementActive: false,
+    navMenusJson: ''
+  })
+
+  const [dynamicMenus, setDynamicMenus] = useState<DynamicMenu[]>([
+    { href: '/careers', label: 'Careers', isActive: true },
+    { href: '/exams', label: 'Exams', isActive: true },
+    { href: '/courses', label: 'Courses', isActive: true },
+    { href: '/scholarships', label: 'Scholarships', isActive: true },
+  ])
 
   const [open, setOpen]           = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [currentLocale, setCurrentLocale] = useState('en')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    // Fetch public site branding settings
+    api.getPublicSettings()
+      .then(res => {
+        if (res) {
+          setSiteSettings(res)
+          if (res.navMenusJson) {
+            try {
+              const parsed = JSON.parse(res.navMenusJson)
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setDynamicMenus(parsed.filter((m: DynamicMenu) => m.isActive !== false))
+              }
+            } catch {
+              // fallback to defaults
+            }
+          }
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const links = [
+    ...(isAuthenticated ? [
+      { href: '/dashboard', label: 'dashboard', icon: Sparkles },
+      { href: '/me/roadmaps', label: 'roadmaps', icon: Compass }
+    ] : []),
+    ...dynamicMenus.map(m => ({ href: m.href, label: m.label, icon: Compass }))
+  ]
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -95,23 +137,31 @@ export default function Navbar() {
     : user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <>
+      {/* Top Announcement Bar if enabled */}
+      {siteSettings.announcementActive && siteSettings.announcementText && (
+        <div className="bg-brand-500 text-white text-xs font-semibold py-1.5 px-4 text-center tracking-wide flex items-center justify-center gap-2 shadow-sm animate-fade-in">
+          <span>{siteSettings.announcementText}</span>
+        </div>
+      )}
 
-          {/* ── Logo ── */}
-          <Link href={`/?locale=${currentLocale}`} className="flex items-center gap-2.5 group shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-brand-gradient flex items-center justify-center
-                            shadow-brand group-hover:shadow-glow transition-shadow duration-300">
-              <Compass className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-display font-bold text-lg">
-              <span className="gradient-text">{translate('logoText', currentLocale)}</span>{' '}
-              <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                {translate('logoSub', currentLocale)}
+      <nav className="sticky top-0 z-50 glass border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+
+            {/* ── Logo ── */}
+            <Link href={`/?locale=${currentLocale}`} className="flex items-center gap-2.5 group shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-brand-gradient flex items-center justify-center
+                              shadow-brand group-hover:shadow-glow transition-shadow duration-300">
+                <Compass className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-display font-bold text-lg">
+                <span className="gradient-text">{siteSettings.logoText || translate('logoText', currentLocale)}</span>{' '}
+                <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                  {siteSettings.logoSubtitle || translate('logoSub', currentLocale)}
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
 
           {/* ── Desktop Nav Links ── */}
           <div className="hidden md:flex items-center gap-1">
@@ -335,5 +385,6 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+    </>
   )
 }
